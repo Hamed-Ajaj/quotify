@@ -1,7 +1,3 @@
-export type ApiResponse = {
-  message: string;
-  success: true;
-}
 
 export type ServiceItem = {
   id: string;

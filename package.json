@@ -36,6 +36,7 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
+    "@david.kucsai/react-pdf-table": "^0.4.1",
     "@react-pdf/renderer": "^4.3.0"
   }
 }

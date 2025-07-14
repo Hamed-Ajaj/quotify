@@ -1,294 +1,377 @@
 import { useState } from 'react';
-import { Trash2, Plus, User, Mail, Calculator, FileText } from 'lucide-react';
+import { Plus, Trash2, Calculator } from 'lucide-react';
+import { Quote, ServiceItem } from 'shared';
+import { generateInvoiceNumber } from '@/lib/utils';
+const QuoteForm = ({ onSubmit }) => {
+  const [formData, setFormData] = useState<Quote>({
+    freelancer: {
+      name: '',
+      email: '',
+      company: '',
+      phone: ''
+    },
+    client: {
+      name: '',
+      email: '',
+      company: '',
+      phone: ''
+    },
+    invoiceDetails: {
+      // TODO : Add functionality from db for later 
 
-// Mock types (replace with your actual shared types)
-interface ServiceItem {
-  id: string;
-  name: string;
-  rate: number;
-  quantity: number;
-}
+      invoiceNo: generateInvoiceNumber(),
+      invoiceDate: new Date().toISOString().slice(0, 10),
+      dueDate: ''
+    },
+    services: [
+      {
+        id: 1,
+        description: 'Web Development',
+        rate: 50,
+        quantity: 0,
+        subtotal: 0
+      }
+    ]
+  });
 
-interface Quote {
-  freelancer: { name: string; email: string };
-  client: { name: string; email: string };
-  items: ServiceItem[];
-  taxRate: number;
-}
+  const serviceOptions = [
+    'Web Development',
+    'Mobile App Development',
+    'UI/UX Design',
+    'SEO Optimization',
+    'Content Writing',
+    'Digital Marketing',
+    'Consultation',
+    'Custom Development'
+  ];
 
-export default function QuoteForm({ onSubmit }: { onSubmit: (quote: Quote) => void }) {
-  const [freelancer, setFreelancer] = useState({ name: "", email: "" });
-  const [client, setClient] = useState({ name: "", email: "" });
-  const [items, setItems] = useState<ServiceItem[]>([]);
-  const [taxRate, setTaxRate] = useState(0);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const addItem = () => {
-    setItems([...items, { id: crypto.randomUUID(), name: "", rate: 0, quantity: 1 }]);
+  const calculateSubtotal = (rate, quantity) => {
+    return rate * quantity;
   };
 
-  const removeItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
+  const updateService = (id, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      services: prev.services.map(service => {
+        if (service.id === id) {
+          const updatedService = { ...service, [field]: value };
+          if (field === 'rate' || field === 'quantity') {
+            updatedService.subtotal = calculateSubtotal(
+              field === 'rate' ? value : service.rate,
+              field === 'quantity' ? value : service.quantity
+            );
+          }
+          return updatedService;
+        }
+        return service;
+      })
+    }));
   };
 
-  const updateItem = (id: string, field: keyof ServiceItem, value: any) => {
-    setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const addService = () => {
+    const newService = {
+      id: Date.now(),
+      description: 'Web Development',
+      rate: 50,
+      quantity: 0,
+      subtotal: 0
+    };
+    setFormData(prev => ({
+      ...prev,
+      services: [...prev.services, newService]
+    }));
   };
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!freelancer.name.trim()) newErrors.freelancerName = "Freelancer name is required";
-    if (!freelancer.email.trim()) newErrors.freelancerEmail = "Freelancer email is required";
-    else if (!/\S+@\S+\.\S+/.test(freelancer.email)) newErrors.freelancerEmail = "Invalid email format";
-
-    if (!client.name.trim()) newErrors.clientName = "Client name is required";
-    if (!client.email.trim()) newErrors.clientEmail = "Client email is required";
-    else if (!/\S+@\S+\.\S+/.test(client.email)) newErrors.clientEmail = "Invalid email format";
-
-    if (items.length === 0) newErrors.items = "At least one service item is required";
-    else {
-      items.forEach((item, index) => {
-        if (!item.name.trim()) newErrors[`item${index}Name`] = "Service name is required";
-        if (item.rate <= 0) newErrors[`item${index}Rate`] = "Rate must be greater than 0";
-        if (item.quantity <= 0) newErrors[`item${index}Quantity`] = "Quantity must be greater than 0";
-      });
-    }
-
-    if (taxRate < 0 || taxRate > 100) newErrors.taxRate = "Tax rate must be between 0 and 100";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = () => {
-    if (validateForm()) {
-      onSubmit({ freelancer, client, items, taxRate });
-    }
-  };
-
-  const calculateSubtotal = () => {
-    return items.reduce((sum, item) => sum + (item.rate * item.quantity), 0);
-  };
-
-  const calculateTax = () => {
-    return calculateSubtotal() * (taxRate / 100);
+  const removeService = (id) => {
+    setFormData(prev => ({
+      ...prev,
+      services: prev.services.filter(service => service.id !== id)
+    }));
   };
 
   const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax();
+    return formData.services.reduce((total, service) => total + service.subtotal, 0);
+  };
+
+  const handleInputChange = (section, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleSubmit = () => {
+    if (!formData.freelancer.name || !formData.freelancer.email ||
+      !formData.client.name || !formData.client.email ||
+      !formData.invoiceDetails.invoiceNo || !formData.invoiceDetails.invoiceDate ||
+      !formData.invoiceDetails.dueDate) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    onSubmit(formData);
   };
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Invoice</h1>
-        <p className="text-gray-600">Fill in the details below to generate your professional invoice</p>
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg mb-8">
+        <h1 className="text-3xl font-bold text-center">Create Quote</h1>
+        <p className="text-center mt-2 opacity-90">Fill in the details to generate a professional quote</p>
       </div>
 
       <div className="space-y-8">
-        {/* Freelancer Section */}
-        <div className="bg-blue-50 p-6 rounded-lg">
-          <div className="flex items-center mb-4">
-            <User className="h-5 w-5 text-blue-600 mr-2" />
-            <h2 className="text-xl font-semibold text-gray-900">Your Information</h2>
-          </div>
+        {/* Freelancer Information */}
+        <div className="bg-gray-50 p-6 rounded-lg border">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+            <div className="w-2 h-6 bg-blue-500 rounded mr-3"></div>
+            Freelancer Information
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
               <input
                 type="text"
-                placeholder="John Doe"
-                value={freelancer.name}
-                onChange={e => setFreelancer({ ...freelancer, name: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.freelancerName ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                value={formData.freelancer.name}
+                onChange={(e) => handleInputChange('freelancer', 'name', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your full name"
+                required
               />
-              {errors.freelancerName && <p className="text-red-500 text-xs mt-1">{errors.freelancerName}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Your Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input
                 type="email"
-                placeholder="john@example.com"
-                value={freelancer.email}
-                onChange={e => setFreelancer({ ...freelancer, email: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.freelancerEmail ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                value={formData.freelancer.email}
+                onChange={(e) => handleInputChange('freelancer', 'email', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="your@email.com"
+                required
               />
-              {errors.freelancerEmail && <p className="text-red-500 text-xs mt-1">{errors.freelancerEmail}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+              <input
+                type="text"
+                value={formData.freelancer.company}
+                onChange={(e) => handleInputChange('freelancer', 'company', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Your company name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+              <input
+                type="tel"
+                value={formData.freelancer.phone}
+                onChange={(e) => handleInputChange('freelancer', 'phone', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="+1 (555) 123-4567"
+              />
             </div>
           </div>
         </div>
 
-        {/* Client Section */}
-        <div className="bg-green-50 p-6 rounded-lg">
-          <div className="flex items-center mb-4">
-            <Mail className="h-5 w-5 text-green-600 mr-2" />
-            <h2 className="text-xl font-semibold text-gray-900">Client Information</h2>
-          </div>
+        {/* Client Information */}
+        <div className="bg-gray-50 p-6 rounded-lg border">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+            <div className="w-2 h-6 bg-green-500 rounded mr-3"></div>
+            Client Information
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Client Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Client Name</label>
               <input
                 type="text"
-                placeholder="Acme Corporation"
-                value={client.name}
-                onChange={e => setClient({ ...client, name: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.clientName ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                value={formData.client.name}
+                onChange={(e) => handleInputChange('client', 'name', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Client's full name"
+                required
               />
-              {errors.clientName && <p className="text-red-500 text-xs mt-1">{errors.clientName}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Client Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Client Email</label>
               <input
                 type="email"
-                placeholder="contact@acme.com"
-                value={client.email}
-                onChange={e => setClient({ ...client, email: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.clientEmail ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                value={formData.client.email}
+                onChange={(e) => handleInputChange('client', 'email', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="client@company.com"
+                required
               />
-              {errors.clientEmail && <p className="text-red-500 text-xs mt-1">{errors.clientEmail}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Client Company</label>
+              <input
+                type="text"
+                value={formData.client.company}
+                onChange={(e) => handleInputChange('client', 'company', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Client's company name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Client Phone</label>
+              <input
+                type="tel"
+                value={formData.client.phone}
+                onChange={(e) => handleInputChange('client', 'phone', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="+1 (555) 987-6543"
+              />
             </div>
           </div>
         </div>
 
-        {/* Services Section */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <FileText className="h-5 w-5 text-gray-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">Services</h2>
+        {/* Invoice Details */}
+        <div className="bg-gray-50 p-6 rounded-lg border">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+            <div className="w-2 h-6 bg-purple-500 rounded mr-3"></div>
+            Invoice Details
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Invoice Number</label>
+              <input
+                type="text"
+                value={formData.invoiceDetails.invoiceNo}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="INV-2025-0001"
+              />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Invoice Date</label>
+              <input
+                type="date"
+                value={formData.invoiceDetails.invoiceDate}
+                onChange={(e) => handleInputChange('invoiceDetails', 'invoiceDate', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+              <input
+                type="date"
+                value={formData.invoiceDetails.dueDate}
+                onChange={(e) => handleInputChange('invoiceDetails', 'dueDate', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Services */}
+        <div className="bg-gray-50 p-6 rounded-lg border">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+              <div className="w-2 h-6 bg-orange-500 rounded mr-3"></div>
+              Services
+            </h2>
             <button
               type="button"
-              onClick={addItem}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+              onClick={addService}
+              className="flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
             >
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus size={16} className="mr-2" />
               Add Service
             </button>
           </div>
 
-          {errors.items && <p className="text-red-500 text-sm mb-4">{errors.items}</p>}
-
           <div className="space-y-4">
-            {items.map((item, index) => (
-              <div key={item.id} className="bg-white p-4 rounded-md border border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <div className="md:col-span-5">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Service Description</label>
-                    <input
-                      type="text"
-                      placeholder="Website Development"
-                      value={item.name}
-                      onChange={e => updateItem(item.id, "name", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors[`item${index}Name`] ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                    />
-                    {errors[`item${index}Name`] && <p className="text-red-500 text-xs mt-1">{errors[`item${index}Name`]}</p>}
-                  </div>
+            {formData.services.map((service) => (
+              <div key={service.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Rate ($)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Service Description</label>
+                    <select
+                      value={service.description}
+                      onChange={(e) => updateService(service.id, 'description', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    >
+                      {serviceOptions.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Rate ($/h)</label>
                     <input
                       type="number"
+                      value={service.rate}
+                      onChange={(e) => updateService(service.id, 'rate', parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       placeholder="50"
-                      value={item.rate || ''}
-                      onChange={e => updateItem(item.id, "rate", +e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors[`item${index}Rate`] ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                      min="0"
+                      step="0.01"
                     />
-                    {errors[`item${index}Rate`] && <p className="text-red-500 text-xs mt-1">{errors[`item${index}Rate`]}</p>}
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Quantity (hours)</label>
                     <input
                       type="number"
-                      placeholder="1"
-                      value={item.quantity || ''}
-                      onChange={e => updateItem(item.id, "quantity", +e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors[`item${index}Quantity`] ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                      value={service.quantity}
+                      onChange={(e) => updateService(service.id, 'quantity', parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      placeholder="40"
+                      min="0"
+                      step="0.1"
                     />
-                    {errors[`item${index}Quantity`] && <p className="text-red-500 text-xs mt-1">{errors[`item${index}Quantity`]}</p>}
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Total</label>
-                    <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700">
-                      ${(item.rate * item.quantity).toFixed(2)}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Subtotal</label>
+                    <div className="flex items-center px-3 py-2 bg-gray-100 border border-gray-300 rounded-md">
+                      <Calculator size={16} className="mr-2 text-gray-500" />
+                      <span className="font-semibold">${service.subtotal.toFixed(2)}</span>
                     </div>
                   </div>
-                  <div className="md:col-span-1 flex justify-end">
+                  <div>
                     <button
                       type="button"
-                      onClick={() => removeItem(item.id)}
-                      className="mt-6 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                      onClick={() => removeService(service.id)}
+                      disabled={formData.services.length === 1}
+                      className={`w-full flex items-center justify-center px-3 py-2 rounded-md transition-colors ${formData.services.length === 1
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-red-500 text-white hover:bg-red-600'
+                        }`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Tax and Summary Section */}
-        <div className="bg-yellow-50 p-6 rounded-lg">
-          <div className="flex items-center mb-4">
-            <Calculator className="h-5 w-5 text-yellow-600 mr-2" />
-            <h2 className="text-xl font-semibold text-gray-900">Tax & Summary</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tax Rate (%)</label>
-              <input
-                type="number"
-                placeholder="10"
-                value={taxRate || ''}
-                onChange={e => setTaxRate(+e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 ${errors.taxRate ? 'border-red-500' : 'border-gray-300'
-                  }`}
-              />
-              {errors.taxRate && <p className="text-red-500 text-xs mt-1">{errors.taxRate}</p>}
-            </div>
-
-            <div className="bg-white p-4 rounded-md border border-gray-200">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-medium">${calculateSubtotal().toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tax ({taxRate}%):</span>
-                  <span className="font-medium">${calculateTax().toFixed(2)}</span>
-                </div>
-                <div className="border-t pt-2">
-                  <div className="flex justify-between">
-                    <span className="text-lg font-semibold text-gray-900">Total:</span>
-                    <span className="text-lg font-bold text-green-600">${calculateTotal().toFixed(2)}</span>
-                  </div>
-                </div>
+          {/* Total */}
+          <div className="mt-6 flex justify-end">
+            <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-4 rounded-lg">
+              <div className="flex items-center space-x-4">
+                <span className="text-lg font-medium">Total:</span>
+                <span className="text-2xl font-bold">${calculateTotal().toFixed(2)}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Submit Button */}
-        <div className="flex justify-end">
+        <div className="flex justify-center">
           <button
             type="button"
             onClick={handleSubmit}
-            className="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-lg"
+            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
           >
-            <FileText className="h-5 w-5 mr-2" />
-            Generate Invoice PDF
+            Generate Quote
           </button>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default QuoteForm;

@@ -5,8 +5,20 @@ import { Quote } from "shared";
 
 export default function App() {
   const [quote, setQuote] = useState<Quote>();
-  const handleQuoteSubmit = (quoteData: Quote) => {
+  const handleQuoteSubmit = async (quoteData: Quote) => {
     setQuote(quoteData);
+    console.log("Quote submitted:", quoteData);
+    const saveQuote = await fetch("http://localhost:3000/quotes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ quote: quoteData })
+    })
+    if (!saveQuote.ok) {
+      console.error("Failed to save quote");
+      return;
+    }
   };
 
   const handleBackToForm = () => {

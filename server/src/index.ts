@@ -1,23 +1,21 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import type { ApiResponse } from 'shared/dist'
+import { getQuotes } from './actions/getQuotes'
+import { saveQuote } from './actions/saveQuotes'
 
 const app = new Hono()
 
 app.use(cors())
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
+app.get('/quotes', (c) => {
+  const quotes = getQuotes()
+  return c.json(quotes)
 })
 
-app.get('/hello', async (c) => {
-
-  const data: ApiResponse = {
-    message: "Hello BHVR!",
-    success: true
-  }
-
-  return c.json(data, { status: 200 })
-})
+app.post("/quotes", async (c) => {
+  const data = await c.req.json();
+  saveQuote(data);
+  return c.text("Quote saved");
+});
 
 export default app

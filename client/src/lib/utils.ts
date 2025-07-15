@@ -9,3 +9,6 @@ export function generateInvoiceNumber(lastNumber = 0) {
   const nextSequence = String(lastNumber + 1).padStart(4, '0');
   return `INV-${year}-${nextSequence}`;
 }
+export const calculateTotal = (formData) => {
+  return formData.services.reduce((total, service) => total + service.subtotal, 0);
+};

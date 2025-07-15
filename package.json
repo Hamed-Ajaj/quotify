@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@david.kucsai/react-pdf-table": "^0.4.1",
-    "@react-pdf/renderer": "^4.3.0"
+    "@react-pdf/renderer": "^4.3.0",
+    "better-sqlite3": "^12.2.0"
   }
 }

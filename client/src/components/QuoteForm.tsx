@@ -3,6 +3,8 @@ import { Plus, Trash2, Calculator } from 'lucide-react';
 import { Quote, ServiceItem } from 'shared';
 import { generateInvoiceNumber } from '@/lib/utils';
 const QuoteForm = ({ onSubmit }) => {
+
+
   const [formData, setFormData] = useState<Quote>({
     freelancer: {
       name: '',
@@ -31,8 +33,14 @@ const QuoteForm = ({ onSubmit }) => {
         quantity: 0,
         subtotal: 0
       }
-    ]
+    ],
+    total: 0
   });
+
+
+  const calculateTotal = () => {
+    return formData.services.reduce((total, service) => total + service.subtotal, 0);
+  };
 
   const serviceOptions = [
     'Web Development',
@@ -64,7 +72,8 @@ const QuoteForm = ({ onSubmit }) => {
           return updatedService;
         }
         return service;
-      })
+      }),
+      total: calculateTotal()
     }));
   };
 
@@ -89,9 +98,6 @@ const QuoteForm = ({ onSubmit }) => {
     }));
   };
 
-  const calculateTotal = () => {
-    return formData.services.reduce((total, service) => total + service.subtotal, 0);
-  };
 
   const handleInputChange = (section, field, value) => {
     setFormData(prev => ({
@@ -238,7 +244,7 @@ const QuoteForm = ({ onSubmit }) => {
               <input
                 type="text"
                 value={formData.invoiceDetails.invoiceNo}
-                readOnly
+                onChange={(e) => handleInputChange('invoiceDetails', 'invoiceNo', e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="INV-2025-0001"
               />

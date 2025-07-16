@@ -5,7 +5,7 @@ export type ApiResponse = {
 
 export type ServiceItem = {
   id: string;
-  descritpion: string;
+  description: string;
   rate: number;
   quantity: number;
   subtotal: number;

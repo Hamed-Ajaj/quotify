@@ -5,12 +5,13 @@ import { generateInvoiceNumber } from '@/lib/utils';
 const QuoteForm = ({ onSubmit }) => {
 
 
+  const invoiceNum = localStorage.getItem("invoiceNum") ? parseInt(localStorage.getItem("invoiceNum")) : 1;
   const [formData, setFormData] = useState<Quote>({
     freelancer: {
-      name: '',
-      email: '',
-      company: '',
-      phone: ''
+      name: localStorage.getItem("name") || '',
+      email: localStorage.getItem("email") || '',
+      company: localStorage.getItem("company") || '',
+      phone: localStorage.getItem("phone") || ''
     },
     client: {
       name: '',
@@ -21,7 +22,7 @@ const QuoteForm = ({ onSubmit }) => {
     invoiceDetails: {
       // TODO : Add functionality from db for later 
 
-      invoiceNo: generateInvoiceNumber(),
+      invoiceNo: generateInvoiceNumber(invoiceNum),
       invoiceDate: new Date().toISOString().slice(0, 10),
       dueDate: ''
     },
@@ -118,6 +119,11 @@ const QuoteForm = ({ onSubmit }) => {
       return;
     }
     onSubmit(formData);
+    localStorage.setItem("name", formData.freelancer.name);
+    localStorage.setItem("email", formData.freelancer.email);
+    localStorage.setItem("company", formData.freelancer.company);
+    localStorage.setItem("phone", formData.freelancer.phone);
+    localStorage.setItem("invoiceNum", (invoiceNum + 1).toString());
   };
 
   return (
@@ -295,15 +301,22 @@ const QuoteForm = ({ onSubmit }) => {
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Service Description</label>
-                    <select
+                    {/* <select */}
+                    {/*   value={service.description} */}
+                    {/*   onChange={(e) => updateService(service.id, 'description', e.target.value)} */}
+                    {/*   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent" */}
+                    {/* > */}
+                    {/*   {serviceOptions.map(option => ( */}
+                    {/*     <option key={option} value={option}>{option}</option> */}
+                    {/*   ))} */}
+                    {/* </select> */}
+                    <input
+                      type="text"
                       value={service.description}
                       onChange={(e) => updateService(service.id, 'description', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    >
-                      {serviceOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
+                      placeholder="Service Description"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Rate ($/h)</label>

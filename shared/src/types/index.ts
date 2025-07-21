@@ -4,7 +4,7 @@ export type ApiResponse = {
 }
 
 export type ServiceItem = {
-  id: string;
+  id: number;
   description: string;
   rate: number;
   quantity: number;
